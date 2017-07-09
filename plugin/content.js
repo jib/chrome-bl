@@ -130,10 +130,13 @@ function insertPriceGuide(div, url, id) {
         $(div).css('background', rec.color);
 
         /// create a link to the price guide and display the ratio
+        var bold = $('<b>').appendTo(div);
         var href = $('<a>', {
-            text: "<b>Ratio: " + rec.ratio + '</b>',
+            text: "Ratio: " + rec.ratio,
             href: url,
-        }).appendTo(div);
+        }).css({
+            color: "#000000"
+        }).appendTo(bold);
 
         // display the price guide
         var table = $('<table></table>', {
