@@ -35,7 +35,7 @@ var divPrefix = "BLPriceAugmenter";
 var qtyAveragePriceRegex = new RegExp("Qty\\s+Avg\\s+Price:\\s*\\$([\\d.]+)", "ig");
 var purchasePriceRegex = new RegExp("US\\s+\\$([\\d.]+)", "ig");
 var purchaseStoreDiv = 'div.buy';
-var purchaseCartDiv = 'div.pricing-box';
+var purchaseCartDiv = 'p.native-price';
 
 var purchaseRecommendationColors = [
     "#FF3300",   // Red => Overpriced!
@@ -106,7 +106,7 @@ function purchaseRecommendation(avgText, purchaseText) {
     var color = purchaseRecommendationColors[index];
     DEBUG && console.log("ratio: " + ratio + ' - index: ' + index + ' - color: ' + color);
 
-    return {ratio: ratio, color: color};
+    return {ratio: ratio, color: color, purchasePrice: purchasePrice, averagePrice: avgPrice };
 }
 
 function insertPriceGuide(targetDiv, purchaseDiv, url, id) {
@@ -134,7 +134,7 @@ function insertPriceGuide(targetDiv, purchaseDiv, url, id) {
         /// create a link to the price guide and display the ratio
         var bold = $('<b>').appendTo(targetDiv);
         var href = $('<a>', {
-            text: "Ratio: " + rec.ratio,
+            text: "Ratio: " + rec.ratio + "    - Avg: " + rec.averagePrice + ' - Price: ' + rec.purchasePrice,
             href: url,
         }).css({
             color: "#000000"
@@ -187,7 +187,11 @@ function myMain () {
 
     // unless we're in a cart or showing part items, there's no need to
     // run any of this
-    var inShop = /#\/shop.*"itemType":"P"/i.test(window.location.href) ? true : false;
+    var inShop =
+        /#\/shop.*"itemType":"P"/i.test(window.location.href) ||
+            /#\/shop.*"itemID":/i.test(window.location.href)
+        ? true
+        : false;
 
     // check if we're in the cart screen or not - we'll need different divs
     var inCart = /#\/cart/i.test(window.location.href) ? true : false;
