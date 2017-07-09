@@ -1,0 +1,22 @@
+{
+  "manifest_version": 2,
+
+  "name": "BL Chrome Plugin",
+  "description": "This extension shows a Google Image search result for the current page",
+  "version": "1.0",
+
+  "permissions": [
+    "activeTab",
+    "webNavigation",
+    "https://ajax.googleapis.com/",
+    "https://www.bricklink.com/*"
+  ],
+  "content_scripts": [
+  {
+    "matches": [
+      "https://store.bricklink.com/*"
+    ],
+    "js": ["jquery.js", "content.js"]
+  }
+  ]
+}
