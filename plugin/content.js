@@ -1,9 +1,4 @@
-// var linkArray = $("script").map(function() {
-//     console.log("here");
-//     return $(this).attr('src');
-// }).get();
-//
-// console.log(linkArray);
+var DEBUG = 0;
 
 /* Sample image links:
 "//img.bricklink.com/ItemImage/PT/86/61482.t1.png",
@@ -14,6 +9,7 @@
 "//img.bricklink.com/ItemImage/PT/5/4865b.t1.png",
 "//img.bricklink.com/ItemImage/PT/13/4865b.t1.png",
 */
+
 var imageRegex = new RegExp('/ItemImage/PT/(\\d+)/(\\w+)\\.t[0-2].png');
 
 // Using templates: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals
@@ -33,10 +29,13 @@ var priceGuideBGColor = "#C0C0C0";
 // Replace this part of the text from the price guide with a link to the price guide itself
 var linkReplaceText = 'Times Sold:';
 
+var divPrefix = "BLPriceAugmenter";
+
 // keep the G flag - we're doing these matches in a loop!
 var qtyAveragePriceRegex = new RegExp("Qty\\s+Avg\\s+Price:\\s*\\$([\\d.]+)", "ig");
-var purchasePriceRegex = new RegExp("Price:\\s+\\w+\\s+\\$([\\d.]+)", "ig");
-var purchaseDiv = 'div.buy';
+var purchasePriceRegex = new RegExp("US\\s+\\$([\\d.]+)", "ig");
+var purchaseStoreDiv = 'div.buy';
+var purchaseCartDiv = 'div.pricing-box';
 
 var purchaseRecommendationColors = [
     "#FF3300",   // Red => Overpriced!
@@ -63,7 +62,7 @@ function findPartImages () {
         if( match != null ) {
             arr.push({ object: this, color: match[1], part: match[2] });
         }
-        //console.log("src: " + $(this).attr('src') );
+        DEBUG && console.log("src: " + $(this).attr('src') );
     })
     return arr;
 }
@@ -80,11 +79,11 @@ function findPrice(regex, text) {
     var match;
     var price;
     while( match = regex.exec(text) ) {
-        console.log(match);
+        DEBUG && console.log(match);
         price = match[1];
     }
 
-    //console.log('price: ' + price );
+    DEBUG && console.log('price: ' + price + ' - text: ' + text );
     return price;
 }
 
@@ -93,7 +92,7 @@ function purchaseRecommendation(avgText, purchaseText) {
     // get the average price from the price guide
     var avgPrice = findPrice(qtyAveragePriceRegex, avgText);
     var purchasePrice = findPrice(purchasePriceRegex, purchaseText);
-    //console.log( "avg: " + avgPrice + " - purchase: " + purchasePrice );
+    DEBUG && console.log( "avg: " + avgPrice + " - purchase: " + purchasePrice );
 
     var ratio = Math.round(avgPrice*1.0/purchasePrice*1.0 * 100);
     var index =
@@ -105,12 +104,12 @@ function purchaseRecommendation(avgText, purchaseText) {
         5;
 
     var color = purchaseRecommendationColors[index];
-    console.log("ratio: " + ratio + ' - index: ' + index + ' - color: ' + color);
+    DEBUG && console.log("ratio: " + ratio + ' - index: ' + index + ' - color: ' + color);
 
     return {ratio: ratio, color: color};
 }
 
-function insertPriceGuide(div, url, id) {
+function insertPriceGuide(targetDiv, purchaseDiv, url, id) {
     // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest
     var xhr = new XMLHttpRequest();
     xhr.open('GET', url, true); // true = async
@@ -119,18 +118,21 @@ function insertPriceGuide(div, url, id) {
         var content = this.response;
         var tr = $(content).find('tr[bgcolor="' + priceGuideBGColor + '"]');
 
+        DEBUG && console.log("purchase price: " + $(targetDiv).find(purchaseDiv).text());
+
         // Get a purchase recommendation
         var rec = purchaseRecommendation(
-                    tr.text(),                          // avg
-                    $(div).find(purchaseDiv).text()     // purchase
+                    tr.text(),                                // avg
+                    $(targetDiv).find(purchaseDiv).text()     // purchase
                 );
 
         // set the background color based on the recommendation:
         // https://stackoverflow.com/questions/15292988/set-background-color-on-div-with-jquery
-        $(div).css('background', rec.color);
+        $(targetDiv).css('background', rec.color);
+        //$(targetDiv).find('*').css('background', rec.color);
 
         /// create a link to the price guide and display the ratio
-        var bold = $('<b>').appendTo(div);
+        var bold = $('<b>').appendTo(targetDiv);
         var href = $('<a>', {
             text: "Ratio: " + rec.ratio,
             href: url,
@@ -144,47 +146,78 @@ function insertPriceGuide(div, url, id) {
         }).addClass('insertPriceGuideTable');
 
         table.append(tr);
-        table.appendTo(div);
+        table.appendTo(targetDiv);
 
         return true;
     };
     xhr.send();
 }
 
-function x () {
+function augmentPage(inCart) {
     var imgArray = findPartImages();
-    console.log(imgArray);
+    DEBUG && console.log(imgArray);
+    console.log("BL Plugin is augmenting....");
 
     $(imgArray).each(function(i) {
         var url = priceGuideUrl(this.part, this.color);
-        console.log(this, url);
+        DEBUG && console.log("Found objects/urls", this, url);
 
-        var div = this.object
+        // different divs to use if we're in the cart
+        var div = inCart
+            ? this.object
+                    .parentElement // the image div
+                    .parentElement // the image box container div
+                    .parentElement // the article table row
+            : this.object
                     .parentElement // the image div
                     .parentElement // the image container div
                     .parentElement // the image box container div
                     .parentElement // the article table row
 
-        insertPriceGuide(div, url, i);
+        var purchaseDiv = inCart ? purchaseCartDiv : purchaseStoreDiv;
+
+        DEBUG && console.log("Target div text: " + $(div).text());
+
+        insertPriceGuide(div, purchaseDiv, url, i);
     });
 }
 
 function myMain () {
     var jsInitChecktimer = setInterval(checkForJS_Finish, 1000);
 
-    var paranoid = 0;
+    // unless we're in a cart or showing part items, there's no need to
+    // run any of this
+    var inShop = /#\/shop.*"itemType":"P"/i.test(window.location.href) ? true : false;
+
+    // check if we're in the cart screen or not - we'll need different divs
+    var inCart = /#\/cart/i.test(window.location.href) ? true : false;
+    DEBUG && console.log("In cart? " + inCart + " - In Shop? " + inShop);
+
     function checkForJS_Finish () {
-        if( $("div.image") ) {
-            clearInterval(jsInitChecktimer);
-            x();
-        } else {
-            console.log("still waiting");
+        if( inShop || inCart ) {
+            if( $("div.image") ) {
+                clearInterval(jsInitChecktimer);
+                augmentPage(inCart);
+            } else {
+                console.log("still waiting");
+            }
         }
     }
 }
 
 // Ajax reload, so if the hash changes, rerun the function
-window.onhashchange = myMain;
+// avoid too many hash changes in short succession forcing reruns/duplicates
+var hashChange = 0;
+window.onhashchange = function() {
+    hashChange += 1;
+}
+setInterval( function() {
+    if( hashChange ) {
+        DEBUG & console.log('hash change detected - reapplying: ' + window.location.href);
+        hashChange = 0;
+        myMain();
+    }
+}, 1000);
 
 myMain();
 
