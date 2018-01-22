@@ -80,7 +80,8 @@ function findPrice(regex, text) {
     var price;
     while( match = regex.exec(text) ) {
         DEBUG && console.log(match);
-        price = match[1];
+        // find the lowest price - they list discounts as well
+        price = match[1] > price ? price : match[1];
     }
 
     DEBUG && console.log('price: ' + price + ' - text: ' + text );
@@ -122,7 +123,8 @@ function insertPriceGuide(targetDiv, purchaseDiv, url, id) {
 
         // Get a purchase recommendation
         var rec = purchaseRecommendation(
-                    tr.text(),                                // avg
+                    // 4 TDs in here, the last one has the average price for used parts
+                    $(tr).children().last().text(),           // avg
                     $(targetDiv).find(purchaseDiv).text()     // purchase
                 );
 
@@ -189,7 +191,9 @@ function myMain () {
     // run any of this
     var inShop =
         /#\/shop.*"itemType":"P"/i.test(window.location.href) ||
-            /#\/shop.*"itemID":/i.test(window.location.href)
+            /#\/shop.*"itemID":/i.test(window.location.href) ||
+            /#\/shop.*"q":/i.test(window.location.href) ||
+            /#\/shop.*"bOnWantedList":/i.test(window.location.href)
         ? true
         : false;
 
