@@ -191,9 +191,13 @@ function myMain () {
     // run any of this
     var inShop =
         /#\/shop.*"itemType":"P"/i.test(window.location.href) ||
+            /#\/shop.*%22itemType%22:%22P%22/i.test(window.location.href) ||
             /#\/shop.*"itemID":/i.test(window.location.href) ||
+            /#\/shop.*%22itemID%22:/i.test(window.location.href) ||
             /#\/shop.*"q":/i.test(window.location.href) ||
-            /#\/shop.*"bOnWantedList":/i.test(window.location.href)
+            /#\/shop.*%22q%22:/i.test(window.location.href) ||
+            /#\/shop.*"bOnWantedList":/i.test(window.location.href) ||
+            /#\/shop.*%22bOnWantedList%22:/i.test(window.location.href)
         ? true
         : false;
 
