@@ -9,6 +9,7 @@
     "activeTab",
     "webNavigation",
     "https://ajax.googleapis.com/",
+    "https://store.bricklink.com/*",
     "https://www.bricklink.com/*"
   ],
   "content_scripts": [
