@@ -38,6 +38,7 @@ var purchaseStoreDiv = 'div.buy';
 var purchaseCartDiv = 'p.native-price';
 
 var purchaseRecommendationColors = [
+    "#B3B3B3",   // Gray => Can't compute.
     "#FF3300",   // Red => Overpriced!
     "#FF9933",   // Orage => Rather overpriced
     "#FFFF66",   // Yellow => Bit overpriced
@@ -97,12 +98,13 @@ function purchaseRecommendation(avgText, purchaseText) {
 
     var ratio = Math.round(avgPrice*1.0/purchasePrice*1.0 * 100);
     var index =
-        ratio < 50 ? 0 :
-        ratio < 75 ? 1 :
-        ratio < 90 ? 2 :
-        ratio < 125 ? 3 :
-        ratio < 200 ? 4 :
-        5;
+        isNaN(ratio) ? 0 :
+        ratio < 50 ? 1 :
+        ratio < 75 ? 2 :
+        ratio < 90 ? 3 :
+        ratio < 125 ? 4 :
+        ratio < 200 ? 5 :
+        6;
 
     var color = purchaseRecommendationColors[index];
     DEBUG && console.log("ratio: " + ratio + ' - index: ' + index + ' - color: ' + color);
