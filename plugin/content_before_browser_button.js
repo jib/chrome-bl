@@ -2,8 +2,6 @@ var settings = {};
 settings.DEBUG = true;
 settings.PluginPrefix = "[BL]";
 
-// Let various parts of the code trigger reapplication
-settings.markForRerun = false;
 
 /*********************************************************
 
@@ -58,8 +56,18 @@ function priceGuideUrl(partID, colorID) {
 
 }
 
+/*********************************************************
 
+Chrome Plugin Functions
 
+*********************************************************/
+
+// Called when the user clicks on the browser action.
+chrome.pageAction.onClicked.addListener(function(tab) {
+  // No tabs or host permissions needed!
+    _d("got here");
+    alert("got here");
+});
 
 /*********************************************************
 
@@ -327,25 +335,6 @@ function runAugmentCode() {
 
 /*********************************************************
 
-Chrome Plugin Functions
-
-*********************************************************/
-
-// https://developer.chrome.com/extensions/messaging#simple
-// Called when the user clicks on the plugin icon (initiated from bakground.js).
-chrome.runtime.onMessage.addListener(function(req, sender, callback) {
-    _d("Manual invoke detected");
-    // Let the extension know we ran.
-    callback({ ranBLAugment: true });
-
-    settings.markForRerun = true;
-
-    // but do it async
-    return true;
-});
-
-/*********************************************************
-
 Main code loop
 
 *********************************************************/
@@ -359,17 +348,18 @@ function myMain () {
 
     // When we're done loading, let's go and augment
     function checkForJS_Finish () {
-        //_d("Check for JS FInish");
         this.inShop = inShop;
         this.inCart = inCart;
         this.inWant = inWant;
+
+        //_d("123 Evaluating...");
 
         if( this.inShop || this.inCart || this.inWant) {
             if( $("div.image") ) {
                 clearInterval(jsInitChecktimer);
                 runAugmentCode();
             } else {
-                _d("still waiting");
+                console.log("still waiting");
             }
         }
     }
@@ -377,20 +367,45 @@ function myMain () {
 
 // Ajax reload, so if the hash changes, rerun the function
 // avoid too many hash changes in short succession forcing reruns/duplicates
+var hashChange = 0;
 window.onhashchange = function() {
-    _d("Page change detected")
-    settings.markForRerun = true;
+    hashChange += 1;
 }
 
+$(document).ready(function(){
+    // The cart now uses a button to switch to the next set of items, rather than
+    // changing the url/hash. So we have to keep an eye on the click to make sure
+    // we catch the update.
+    $("div.btn-group").click(function(){
+        hashChange += 1;
+    })
+});
+
+var onClickSetForWantedList = false;
 setInterval( function() {
-    //_d("Need to run?");
-    // Do we need to run again?
-    if( settings.markForRerun ) {
-        _d("Augmentation Trigger set - reapplying BL Augment: " + window.location.href);
-        settings.markForRerun = false;
+    if( hashChange ) {
+        _d('Page change detected - reapplying bl augment: ' + window.location.href);
+        hashChange = 0;
         myMain();
+    }
+
+    // Special case; the quickbuy wantedlist loads stores with inventory async.
+    // This means the elements aren't on the page when 'document.ready' fires and
+    // we can't augment them just yet. So check periodically.
+    // URL: https://www.bricklink.com/v2/wanted/buy.page?wantedMoreID=0
+    if( !onClickSetForWantedList &&
+        isPageInWantedList(window.location.href) &&
+        $("button.bl-btn").length > 0
+    ) {
+        _d("Wanted list OnClick handler added");
+        onClickSetForWantedList = true;
+        $("button.bl-btn").click(function(){
+            _d("Wanted list item clicked");
+            hashChange += 1;
+        })
     }
 }, 1000);
 
 myMain();
+
 

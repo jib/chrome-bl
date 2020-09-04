@@ -1,23 +1,39 @@
 {
-  "manifest_version": 2,
-
   "name": "BL Chrome Plugin",
-  "description": "This extension shows a Google Image search result for the current page",
+  "description" : "BrickLink Price Highlighter",
   "version": "1.0",
-
+  "page_action": {
+    "default_icon": {
+       "16": "images/icon16.png"
+     }
+  },
+  "icons": {
+    "16": "images/icon16.png"
+  },
   "permissions": [
     "activeTab",
     "webNavigation",
+    "declarativeContent",
     "https://ajax.googleapis.com/",
     "https://store.bricklink.com/*",
-    "https://www.bricklink.com/*"
+    "https://www.bricklink.com/*",
+    "https://bricklink.com/*"
   ],
+  "manifest_version": 2,
+  "background": {
+    "scripts": ["background.js"],
+    "persistent": false
+  },
   "content_scripts": [
-  {
-    "matches": [
-      "https://store.bricklink.com/*"
-    ],
-    "js": ["jquery.js", "content.js"]
-  }
+    {
+      "all_frames": true,
+      "js": ["jquery.js", "content.js"],
+      "matches": [
+        "https://store.bricklink.com/*",
+        "https://www.bricklink.com/*",
+        "https://bricklink.com/*"
+      ],
+      "run_at": "document_idle"
+    }
   ]
 }
